@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FinBuddy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .insight-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        .recommendation-item {
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+            background: #f8f9ff;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+        .recommendation-item.warning {
+            border-left-color: #ff6b6b;
+            background: #fff5f5;
+        }
+        .recommendation-item.success {
+            border-left-color: #51cf66;
+            background: #f1fdf4;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+        .tab-content {
+            margin-top: 1.5rem;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .loading-spinner.active {
+            display: block;
+        }
+        .goal-progress-bar {
+            height: 25px;
+            border-radius: 5px;
+            background: #e9ecef;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .goal-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">🎯 FinBuddy</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="loadInsights()">Insights</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Quick Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-spending">₹0</div>
+                    <div class="metric-label">Monthly Spending</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="daily-average" style="color: #51cf66;">₹0</div>
+                    <div class="metric-label">Daily Average</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="potential-savings" style="color: #ffa500;">₹0</div>
+                    <div class="metric-label">Potential Savings</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="savings-percentage" style="color: #764ba2;">0%</div>
+                    <div class="metric-label">Savings Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs for Different Sections -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">Smart Insights</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="goals-tab" data-bs-toggle="tab" data-bs-target="#goals" type="button" role="tab">Financial Goals</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-lg-6">
+                        <div class="insight-section">
+                            <h5>📊 Spending Breakdown</h5>
+                            <div class="chart-container">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="insight-section">
+                            <h5>💰 Budget vs Actual (30 Days)</h5>
+                            <div class="chart-container">
+                                <canvas id="budgetChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Insights Tab -->
+            <div class="tab-pane fade" id="insights" role="tabpanel">
+                <div class="mt-4">
+                    <div class="loading-spinner active" id="insights-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading smart insights...</p>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div class="insight-section" id="recommendations-section" style="display: none;">
+                        <h5>💡 Smart Recommendations</h5>
+                        <div id="recommendations-list"></div>
+                    </div>
+
+                    <!-- Anomalies -->
+                    <div class="insight-section" id="anomalies-section" style="display: none;">
+                        <h5>⚠️ Spending Anomalies Detected</h5>
+                        <div id="anomalies-list"></div>
+                    </div>
+
+                    <!-- Savings Tips -->
+                    <div class="insight-section" id="savings-section" style="display: none;">
+                        <h5>💎 Savings Opportunities</h5>
+                        <div id="savings-tips"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goals Tab -->
+            <div class="tab-pane fade" id="goals" role="tabpanel">
+                <div class="mt-4">
+                    <div class="loading-spinner active" id="goals-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading goals...</p>
+                    </div>
+                    <div id="goals-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let categoryChart, budgetChart;
+
+        // Load overview data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverview();
+            
+            // Load insights when clicking the tab
+            document.getElementById('insights-tab').addEventListener('click', loadInsights);
+            document.getElementById('goals-tab').addEventListener('click', loadGoals);
+        });
+
+        function loadOverview() {
+            fetch('/api/insights/overview')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const overview = data.data;
+                        
+                        // Update metrics
+                        document.getElementById('total-spending').textContent = 
+                            '₹' + parseFloat(overview.total_spending).toFixed(2);
+                        document.getElementById('daily-average').textContent = 
+                            '₹' + parseFloat(overview.daily_average).toFixed(2);
+                        
+                        // Load savings data
+                        fetch('/api/insights/savings-potential')
+                            .then(res => res.json())
+                            .then(savings => {
+                                if (savings.status === 'success') {
+                                    document.getElementById('potential-savings').textContent = 
+                                        '₹' + parseFloat(savings.data.potential_monthly_savings).toFixed(2);
+                                    document.getElementById('savings-percentage').textContent = 
+                                        parseFloat(savings.data.savings_percentage).toFixed(1) + '%';
+                                }
+                            });
+                        
+                        // Create category pie chart
+                        const categories = Object.keys(overview.category_breakdown);
+                        const amounts = Object.values(overview.category_breakdown);
+                        
+                        const ctx = document.getElementById('categoryChart').getContext('2d');
+                        if (categoryChart) categoryChart.destroy();
+                        
+                        categoryChart = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+                                datasets: [{
+                                    data: amounts,
+                                    backgroundColor: [
+                                        '#667eea', '#764ba2', '#f093fb',
+                                        '#4facfe', '#43e97b', '#fa709a',
+                                        '#fee140', '#30cfd0'
+                                    ]
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Create budget chart
+                        const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+                        if (budgetChart) budgetChart.destroy();
+                        
+                        budgetChart = new Chart(budgetCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+                                datasets: [{
+                                    label: 'Spent',
+                                    data: amounts,
+                                    backgroundColor: '#667eea'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y'
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('Error loading overview:', err));
+        }
+
+        function loadInsights() {
+            document.getElementById('insights-loading').classList.add('active');
+            document.getElementById('recommendations-section').style.display = 'none';
+            document.getElementById('anomalies-section').style.display = 'none';
+            document.getElementById('savings-section').style.display = 'none';
+
+            // Load recommendations
+            fetch('/api/insights/recommendations')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.recommendations.length > 0) {
+                        let html = '';
+                        data.recommendations.forEach(rec => {
+                            const type = rec.type === 'increase_budget' ? 'warning' : 'success';
+                            html += \`
+                                <div class="recommendation-item \${type}">
+                                    <strong>\${rec.category.charAt(0).toUpperCase() + rec.category.slice(1)}</strong>
+                                    <p>\${rec.reason}</p>
+                                    <small>Suggested Budget: ₹\${rec.suggested_budget.toFixed(2)}</small>
+                                </div>
+                            \`;
+                        });
+                        document.getElementById('recommendations-list').innerHTML = html;
+                        document.getElementById('recommendations-section').style.display = 'block';
+                    }
+                });
+
+            // Load anomalies
+            fetch('/api/insights/anomalies')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.anomalies.length > 0) {
+                        let html = '';
+                        data.anomalies.forEach(anom => {
+                            html += \`
+                                <div class="recommendation-item warning">
+                                    <strong>\${anom.category.charAt(0).toUpperCase() + anom.category.slice(1)}</strong>
+                                    <p>₹\${anom.amount.toFixed(2)} (\${anom.deviation.toFixed(1)}% from average)</p>
+                                    <small>Severity: \${anom.severity.toUpperCase()}</small>
+                                </div>
+                            \`;
+                        });
+                        document.getElementById('anomalies-list').innerHTML = html;
+                        document.getElementById('anomalies-section').style.display = 'block';
+                    }
+                });
+
+            // Load savings potential
+            fetch('/api/insights/savings-potential')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        let html = \`<p><strong>Potential Monthly Savings: ₹\${data.data.potential_monthly_savings.toFixed(2)}</strong></p>\`;
+                        data.data.reduction_tips.forEach(tip => {
+                            html += \`
+                                <div class="recommendation-item success">
+                                    <strong>\${tip.category.toUpperCase()}</strong>
+                                    <p>\${tip.tip}</p>
+                                    <small>💰 Save: ₹\${tip.savings.toFixed(2)}/month</small>
+                                </div>
+                            \`;
+                        });
+                        document.getElementById('savings-tips').innerHTML = html;
+                        document.getElementById('savings-section').style.display = 'block';
+                    }
+                    document.getElementById('insights-loading').classList.remove('active');
+                });
+        }
+
+        function loadGoals() {
+            document.getElementById('goals-loading').classList.add('active');
+            document.getElementById('goals-list').innerHTML = '';
+
+            fetch('/api/insights/goals')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.goals.length > 0) {
+                        let html = '';
+                        data.goals.forEach(goal => {
+                            const statusClass = goal.on_track ? 'success' : 'warning';
+                            html += \`
+                                <div class="insight-section">
+                                    <h6>\${goal.purpose}</h6>
+                                    <div class="goal-progress-bar">
+                                        <div class="goal-progress-fill" style="width: \${goal.progress_percentage}%">
+                                            \${goal.progress_percentage.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                    <p style="margin: 0.5rem 0;">₹\${goal.current_amount.toFixed(2)} / ₹\${goal.target_amount.toFixed(2)}</p>
+                                    <small>
+                                        Days remaining: \${goal.days_remaining} | 
+                                        Daily savings needed: ₹\${goal.daily_required_savings.toFixed(2)}
+                                    </small>
+                                    <p style="margin-top: 0.5rem;" class="text-\${statusClass}">
+                                        \${goal.on_track ? '✅ On track!' : '⚠️ Increase daily savings'}
+                                    </p>
+                                </div>
+                            \`;
+                        });
+                        document.getElementById('goals-list').innerHTML = html;
+                    } else {
+                        document.getElementById('goals-list').innerHTML = 
+                            '<div class="alert alert-info">No active goals. Create one to get started!</div>';
+                    }
+                    document.getElementById('goals-loading').classList.remove('active');
+                })
+                .catch(err => {
+                    console.error('Error loading goals:', err);
+                    document.getElementById('goals-loading').classList.remove('active');
+                });
+        }
+    </script>
+</body>
+</html>
